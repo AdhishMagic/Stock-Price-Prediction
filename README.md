@@ -98,6 +98,83 @@ Build the application for production:
 npm run build
 ```
 
+### GitHub Pages (Frontend Only)
+This repo includes a workflow `.github/workflows/frontend-deploy.yml` that builds the Vite app and publishes the static `dist/` folder to the `gh-pages` branch.
+
+Steps to enable:
+1. Push changes to `main` (workflow triggers automatically) or run manually via Actions tab (workflow_dispatch).
+2. In the repository Settings → Pages, set Source = Deploy from a branch → `gh-pages` / root.
+3. Access your site at: `https://<your-username>.github.io/<repo-name>/`.
+
+Because the backend is dynamic, the static frontend must know where to reach the API. In production you should set during build:
+```bash
+VITE_API_BASE_URL=https://your-backend-host.example.com npm run build
+```
+
+If hosting only the static frontend (no backend), the forecast features will fail unless you also deploy the API somewhere (see below) and point `VITE_API_BASE_URL` to it.
+
+### Backend Deployment Options
+The backend requires a Python environment to run FastAPI + Uvicorn. Options:
+
+| Platform | Quick Steps | Notes |
+|----------|-------------|-------|
+| Docker + VPS | `docker-compose up -d --build` on a Linux VM | Mount `backend/models` volume to persist retrained models |
+| Render.com | New Web Service → Python → Start command: `uvicorn backend.predict_service:app --host 0.0.0.0 --port $PORT` | Add build command: `pip install -r backend/requirements.txt` |
+| Fly.io | Create `fly.toml` with internal port 8000; `fly launch` | Can add volume for models |
+| Google Cloud Run | Build image: `gcloud builds submit --tag gcr.io/PROJECT/stock-api` then deploy | Set `PORT=8000` env |
+| Railway | Provision service from repo | Automatic deploy on push |
+
+### Example Minimal Docker Run (Backend Only)
+```bash
+docker build -f Dockerfile.backend -t stock-api .
+docker run -p 8000:8000 -e OFFLINE_MODE=1 stock-api
+```
+
+### Multi-Container (Frontend + Backend)
+Provided `docker-compose.yml` runs both:
+```bash
+docker-compose up --build
+```
+Frontend: http://localhost:5173  
+Backend:  http://localhost:8000/health
+
+If deploying behind a reverse proxy (Nginx/Traefik), terminate TLS at proxy and forward traffic to backend service port 8000.
+
+### GitHub Actions CI
+Workflow `.github/workflows/ci.yml` runs:
+- Backend tests (pytest)
+- Frontend build
+- Docker image build (both backend & frontend)
+
+You can extend it by adding image push:
+```yaml
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Push images
+        run: |
+          docker tag stock-backend:ci ghcr.io/${{ github.repository }}-backend:latest
+          docker push ghcr.io/${{ github.repository }}-backend:latest
+```
+
+### Environment Variables Summary
+| Variable | Scope | Purpose | Default |
+|----------|-------|---------|---------|
+| VITE_API_BASE_URL | Frontend build/runtime | Base URL for API calls | http://localhost:8000 |
+| OFFLINE_MODE | Backend runtime | Use synthetic data if downloads fail | 0 (disabled) |
+
+### Production Hardening Checklist
+- Pin Python dependency versions tightly (avoid accidental major bumps)
+- Add logging & monitoring (e.g. `uvicorn --log-level info` or structlog)
+- Restrict CORS origins instead of `*`
+- Serve behind HTTPS
+- Add a retraining job (cron / GitHub Action) if live data forecasting required
+- Persist models (volume, object storage) across container restarts
+
+
 ---
 
 ## 🧠 Backend (Quantile LightGBM Forecast API)
@@ -135,6 +212,28 @@ function ForecastPanel({ ticker }) {
 ```
 
 The stock analysis dashboard page now demonstrates a basic integration snippet showing model output.
+
+### Offline / No Network Mode
+
+If Yahoo Finance is unavailable or you are in an offline environment, set:
+
+```
+OFFLINE_MODE=1
+```
+
+Effects:
+- `backend/train_lightgbm.py` will generate synthetic OHLCV data if download fails.
+- `backend/predict_service.py` will fall back to existing CSV in `backend/data/` or create a small synthetic series.
+- You can also pre-generate larger synthetic datasets:
+
+```
+python backend/generate_sample_data.py AAPL MSFT TSLA --days 1500
+```
+
+Then train as usual:
+```
+python backend/train_lightgbm.py AAPL --horizons 5,10 --horizon 10
+```
 ### Directory
 ```
 backend/
@@ -226,6 +325,22 @@ export async function fetchForecast(ticker, horizon=30) {
 ### 6. Confidence Intervals
 Provided via quantile models (p10 / p50 / p90). Use p10 & p90 to render an area band around the median line in charts.
 
+### Running the API Locally
+1. Install dependencies: `pip install -r backend/requirements.txt`
+2. (Optional) Train models for a ticker (offline synthetic if failed): `python backend/train_lightgbm.py MSFT --horizon 5`
+3. Recommended start (handles PATH issues):
+   - Windows PowerShell:
+     ```powershell
+     $env:OFFLINE_MODE=1
+     python -m uvicorn backend.predict_service:app --port 8000 --reload
+     ```
+   - Or simply run the helper batch script (offline by default):
+     ```cmd
+     start_backend.bat
+     ```
+   - To force online mode with the batch script: `start_backend.bat ONLINE`
+
+If you previously saw 'uvicorn not recognized', using `python -m uvicorn ...` ensures the correct interpreter module is used even when Scripts\ is not on PATH.
 ### 6.1 Model Loading Optimization
 `backend/utils/model_loader.py` caches loaded models & metadata (LRU cache) so repeated `/api/predict` calls avoid re-reading each LightGBM file. If you retrain models, restart the API process to clear the cache.
 

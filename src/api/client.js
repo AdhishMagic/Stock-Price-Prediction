@@ -1,5 +1,19 @@
 // Lightweight API client wrapper
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+function normalizeBase(raw) {
+  if (!raw) return 'http://localhost:8000';
+  let v = String(raw).trim();
+  if (v.startsWith(':')) {
+    // e.g. ':8000' -> assume localhost
+    v = 'http://localhost' + v;
+  }
+  if (!/^https?:\/\//i.test(v)) {
+    v = 'http://' + v; // force protocol if missing
+  }
+  // remove trailing slashes
+  v = v.replace(/\/+$/,'');
+  return v;
+}
+const BASE_URL = normalizeBase(import.meta.env.VITE_API_BASE_URL);
 
 async function apiFetch(path, { method = 'GET', body, signal, headers } = {}) {
   const res = await fetch(`${BASE_URL}${path}`, {

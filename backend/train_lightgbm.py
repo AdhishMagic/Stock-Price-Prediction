@@ -15,7 +15,35 @@ import numpy as np
 import joblib
 from sklearn.metrics import mean_absolute_error
 import lightgbm as lgb
-from feature_engineering import build_features
+import sys
+# Ensure project root on path when executed directly (python backend/train_lightgbm.py ...)
+if __package__ is None and __name__ == "__main__":
+    # add parent directory so that `backend.` absolute imports work regardless of CWD
+    sys.path.append(str(Path(__file__).resolve().parent.parent))
+
+from backend.feature_engineering import build_features
+import os
+
+def _generate_synthetic(ticker: str, rows: int = 800) -> pd.DataFrame:
+    """Generate synthetic OHLCV data when online download fails."""
+    rng = np.random.default_rng(abs(hash(ticker)) % (2**32))
+    dates = pd.date_range(end=pd.Timestamp.today(), periods=rows, freq='B')
+    base = 100 + rng.normal(0, 1, size=rows).cumsum() * 0.5 + np.linspace(0, rows*0.02, rows)
+    vol = rng.normal(0, 1, size=rows)
+    close = base + vol
+    open_p = close + rng.normal(0, 0.5, size=rows)
+    high = np.maximum(open_p, close) + rng.random(rows)*1.2
+    low = np.minimum(open_p, close) - rng.random(rows)*1.2
+    volume = rng.integers(200_000, 2_000_000, size=rows)
+    df = pd.DataFrame({
+        'date': dates,
+        'open': open_p.round(2),
+        'high': high.round(2),
+        'low': low.round(2),
+        'close': close.round(2),
+        'volume': volume
+    })
+    return df
 
 MODELS_DIR = Path(__file__).parent / 'models'
 DATA_DIR = Path(__file__).parent / 'data'
@@ -54,7 +82,8 @@ def train_step(X: pd.DataFrame, y: pd.Series, quantile: float, step: int, out_di
         'alpha': quantile,
     })
     lgb_train = lgb.Dataset(X, y)
-    model = lgb.train(params, lgb_train, num_boost_round=500, verbose_eval=False)
+    # LightGBM 4.6.0 removed verbose_eval argument in core.train; suppress logging by omitting it
+    model = lgb.train(params, lgb_train, num_boost_round=300)
     out_path = out_dir / f'step_{step}_q{int(quantile*100)}.pkl'
     joblib.dump(model, out_path)
     return model, out_path
@@ -70,8 +99,38 @@ def main():
     args = ap.parse_args()
 
     csv_path = DATA_DIR / f"{args.ticker.upper()}.csv"
+    
+    # Auto-download if CSV missing
+    offline_mode = os.getenv('OFFLINE_MODE', '0') in ('1','true','TRUE','yes','YES')
     if not csv_path.exists():
-        raise SystemExit(f"Data file not found: {csv_path}. Run data_fetch.py first.")
+        DATA_DIR.mkdir(parents=True, exist_ok=True)
+        if offline_mode:
+            print(f"OFFLINE_MODE=1 -> generating synthetic data for {args.ticker.upper()}")
+            df_syn = _generate_synthetic(args.ticker.upper())
+            df_syn.to_csv(csv_path, index=False)
+        else:
+            print(f"Data not found, downloading {args.ticker.upper()} from yfinance...")
+            try:
+                import yfinance as yf
+                ticker_data = yf.download(args.ticker.upper(), period='3y', auto_adjust=True, progress=False)
+                if ticker_data.empty:
+                    print("Download empty; falling back to synthetic data.")
+                    df_syn = _generate_synthetic(args.ticker.upper())
+                    df_syn.to_csv(csv_path, index=False)
+                else:
+                    ticker_data.reset_index(inplace=True)
+                    ticker_data.columns = [c.lower() for c in ticker_data.columns]
+                    keep = [c for c in ['date','open','high','low','close','adj close','volume'] if c in ticker_data.columns]
+                    ticker_data = ticker_data[keep]
+                    if 'adj close' in ticker_data.columns and 'close' in ticker_data.columns:
+                        ticker_data['close'] = ticker_data['adj close']
+                        ticker_data.drop(columns=['adj close'], inplace=True)
+                    ticker_data.to_csv(csv_path, index=False)
+                    print(f"Saved {len(ticker_data)} rows to {csv_path}")
+            except Exception as e:
+                print(f"Download failed ({e}); using synthetic data.")
+                df_syn = _generate_synthetic(args.ticker.upper())
+                df_syn.to_csv(csv_path, index=False)
 
     df = pd.read_csv(csv_path, parse_dates=['date'])
     df = prepare(df)
