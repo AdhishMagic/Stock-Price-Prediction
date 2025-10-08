@@ -1,412 +1,358 @@
-# React
+<div align="center">
 
-A modern React-based project utilizing the latest frontend technologies and tools for building responsive web applications.
+# Stock Price Prediction Platform
 
-## 🚀 Features
+End‑to‑end stock forecasting web application combining a React/Tailwind frontend with a FastAPI + LightGBM backend that serves multi‑step quantile forecasts (prediction intervals). Supports fully offline synthetic data mode, multi‑horizon training, containerized deployment, and CI workflows.
 
-- **React 18** - React version with improved rendering and concurrent features
-- **Vite** - Lightning-fast build tool and development server
-- **Redux Toolkit** - State management with simplified Redux setup
-- **TailwindCSS** - Utility-first CSS framework with extensive customization
-- **React Router v6** - Declarative routing for React applications
-- **Data Visualization** - Integrated D3.js and Recharts for powerful data visualization
-- **Form Management** - React Hook Form for efficient form handling
-- **Animation** - Framer Motion for smooth UI animations
-- **Testing** - Jest and React Testing Library setup
-
-## 📋 Prerequisites
-
-- Node.js (v14.x or higher)
-- npm or yarn
-
-## 🛠️ Installation
-
-1. Install dependencies:
-   ```bash
-   npm install
-   # or
-   yarn install
-   ```
-   
-2. Start the development server:
-   ```bash
-   npm start
-   # or
-   yarn start
-   ```
-
-## 📁 Project Structure
-
-```
-react_app/
-├── public/             # Static assets
-├── src/
-│   ├── components/     # Reusable UI components
-│   ├── pages/          # Page components
-│   ├── styles/         # Global styles and Tailwind configuration
-│   ├── App.jsx         # Main application component
-│   ├── Routes.jsx      # Application routes
-│   └── index.jsx       # Application entry point
-├── .env                # Environment variables
-├── index.html          # HTML template
-├── package.json        # Project dependencies and scripts
-├── tailwind.config.js  # Tailwind CSS configuration
-└── vite.config.js      # Vite configuration
-```
-
-## 🧩 Adding Routes
-
-To add new routes to the application, update the `Routes.jsx` file:
-
-```jsx
-import { useRoutes } from "react-router-dom";
-import HomePage from "pages/HomePage";
-import AboutPage from "pages/AboutPage";
-
-const ProjectRoutes = () => {
-  let element = useRoutes([
-    { path: "/", element: <HomePage /> },
-    { path: "/about", element: <AboutPage /> },
-    // Add more routes as needed
-  ]);
-
-  return element;
-};
-```
-
-## 🎨 Styling
-
-This project uses Tailwind CSS for styling. The configuration includes:
-
-- Forms plugin for form styling
-- Typography plugin for text styling
-- Aspect ratio plugin for responsive elements
-- Container queries for component-specific responsive design
-- Fluid typography for responsive text
-- Animation utilities
-
-## 📱 Responsive Design
-
-The app is built with responsive design using Tailwind CSS breakpoints.
-
-
-## 📦 Deployment
-
-Build the application for production:
-
-```bash
-npm run build
-```
-
-### GitHub Pages (Frontend Only)
-This repo includes a workflow `.github/workflows/frontend-deploy.yml` that builds the Vite app and publishes the static `dist/` folder to the `gh-pages` branch.
-
-Steps to enable:
-1. Push changes to `main` (workflow triggers automatically) or run manually via Actions tab (workflow_dispatch).
-2. In the repository Settings → Pages, set Source = Deploy from a branch → `gh-pages` / root.
-3. Access your site at: `https://<your-username>.github.io/<repo-name>/`.
-
-Because the backend is dynamic, the static frontend must know where to reach the API. In production you should set during build:
-```bash
-VITE_API_BASE_URL=https://your-backend-host.example.com npm run build
-```
-
-If hosting only the static frontend (no backend), the forecast features will fail unless you also deploy the API somewhere (see below) and point `VITE_API_BASE_URL` to it.
-
-### Backend Deployment Options
-The backend requires a Python environment to run FastAPI + Uvicorn. Options:
-
-| Platform | Quick Steps | Notes |
-|----------|-------------|-------|
-| Docker + VPS | `docker-compose up -d --build` on a Linux VM | Mount `backend/models` volume to persist retrained models |
-| Render.com | New Web Service → Python → Start command: `uvicorn backend.predict_service:app --host 0.0.0.0 --port $PORT` | Add build command: `pip install -r backend/requirements.txt` |
-| Fly.io | Create `fly.toml` with internal port 8000; `fly launch` | Can add volume for models |
-| Google Cloud Run | Build image: `gcloud builds submit --tag gcr.io/PROJECT/stock-api` then deploy | Set `PORT=8000` env |
-| Railway | Provision service from repo | Automatic deploy on push |
-
-### Example Minimal Docker Run (Backend Only)
-```bash
-docker build -f Dockerfile.backend -t stock-api .
-docker run -p 8000:8000 -e OFFLINE_MODE=1 stock-api
-```
-
-### Multi-Container (Frontend + Backend)
-Provided `docker-compose.yml` runs both:
-```bash
-docker-compose up --build
-```
-Frontend: http://localhost:5173  
-Backend:  http://localhost:8000/health
-
-If deploying behind a reverse proxy (Nginx/Traefik), terminate TLS at proxy and forward traffic to backend service port 8000.
-
-### GitHub Actions CI
-Workflow `.github/workflows/ci.yml` runs:
-- Backend tests (pytest)
-- Frontend build
-- Docker image build (both backend & frontend)
-
-You can extend it by adding image push:
-```yaml
-      - name: Login to GHCR
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Push images
-        run: |
-          docker tag stock-backend:ci ghcr.io/${{ github.repository }}-backend:latest
-          docker push ghcr.io/${{ github.repository }}-backend:latest
-```
-
-### Environment Variables Summary
-| Variable | Scope | Purpose | Default |
-|----------|-------|---------|---------|
-| VITE_API_BASE_URL | Frontend build/runtime | Base URL for API calls | http://localhost:8000 |
-| OFFLINE_MODE | Backend runtime | Use synthetic data if downloads fail | 0 (disabled) |
-
-### Production Hardening Checklist
-- Pin Python dependency versions tightly (avoid accidental major bumps)
-- Add logging & monitoring (e.g. `uvicorn --log-level info` or structlog)
-- Restrict CORS origins instead of `*`
-- Serve behind HTTPS
-- Add a retraining job (cron / GitHub Action) if live data forecasting required
-- Persist models (volume, object storage) across container restarts
-
+</div>
 
 ---
 
-## 🧠 Backend (Quantile LightGBM Forecast API)
+## 1. Key Features
 
-This repo now includes a backend (FastAPI) for multi-step stock price forecasting with prediction intervals using per-horizon LightGBM quantile models.
+### Frontend
+- React 18 + Vite (fast dev + HMR)
+- TailwindCSS utility styling + animation plugins
+- Recharts / D3 available for visualization
+- Custom hooks (`useModelMetadata`, `useStockForecast`) with in‑memory caching
+- Graceful horizon fallback messaging from backend
+- BASE_URL sanitation + robust ticker normalization
 
-### Frontend Integration Hooks
+### Backend / ML
+- FastAPI + Uvicorn ASGI service
+- LightGBM quantile models (p10 / p50 / p90) per forecast step
+- Direct multi‑step strategy (one model per horizon step & quantile)
+- Multi‑horizon training in a single invocation (`--horizons 5,10,30`)
+- Pinball loss + MAE metrics stored in metadata
+- Model & metadata caching (LRU) for faster subsequent predictions
+- Synthetic data fallback (OFFLINE_MODE) for training & inference resilience
 
-Added lightweight API client in `src/api/client.js` and React hooks in `src/api/hooks.js`:
+### DevOps / Deployment
+- Docker (separate backend + frontend images) + `docker-compose`
+- Bootstrap auto‑training inside backend container if models missing
+- GitHub Actions CI (tests + build + Docker build)
+- GitHub Pages workflow for static frontend deployment
+- Configurable via environment variables (API base URL, offline mode, bootstrap tickers/horizons)
 
-- `useModelMetadata(ticker)` loads `/api/models/{ticker}` and caches results.
-- `useStockForecast({ ticker, horizon, recent })` posts to `/api/predict` and caches per (ticker,horizon).
+---
 
-Configure backend URL via environment variable:
-
-Add to a `.env` file at project root (Vite will expose variables prefixed with `VITE_`):
+## 2. Architecture Overview
 
 ```
-VITE_API_BASE_URL=http://localhost:8000
+┌──────────────────────┐      fetch /api/*            ┌──────────────────────────┐
+│  React Frontend      │  ─────────────────────────▶  │  FastAPI Prediction API │
+│  (Vite Dev / Nginx)  │  ◀─────────────────────────  │  /api/predict /api/models│
+└─────────┬────────────┘                              └───────────┬──────────────┘
+					│  VITE_API_BASE_URL                                   │
+					│                                                       │ loads
+					▼                                                       ▼
+	Browser Hooks / Caching                                LightGBM Quantile Models
+																												 (step_i_q{quantile}.pkl)
+																												 + metadata.json
 ```
 
-Example usage inside a component:
+Training pipeline builds one model per (step, quantile) for each requested horizon. Metadata records metrics (MAE, pinball) for quick analysis and to enable backend fallback logic.
+
+---
+
+## 3. Technologies Used
+
+| Layer | Stack |
+|-------|-------|
+| Frontend | React 18, Vite, TailwindCSS, Recharts/D3, React Router v6, Framer Motion |
+| Backend | FastAPI, Uvicorn, Pydantic |
+| ML | LightGBM (quantile), scikit-learn metrics, NumPy, Pandas |
+| Tooling | GitHub Actions, Docker / Compose, Node 20, Python 3.11/3.13 compatible |
+
+---
+
+## 4. Project Structure (Key Directories)
+
+```
+backend/
+	feature_engineering.py      # Feature builders
+	train_lightgbm.py           # Multi-horizon quantile training script
+	predict_service.py          # FastAPI app
+	bootstrap_models.py         # Auto-trains default models in container
+	utils/model_loader.py       # Cached loader for models & metadata
+	models/<TICKER>/H<h>/...    # Persisted models + metadata.json
+src/
+	api/client.js               # Fetch wrapper with BASE_URL normalization
+	api/hooks.js                # React hooks (metadata + forecast) with caching
+	pages/stock-analysis-dashboard/ ... UI pages
+docker-compose.yml            # Multi-container local stack
+Dockerfile.backend / frontend # Container images
+.github/workflows/*.yml       # CI & Pages deploy workflows
+```
+
+---
+
+## 5. Environment Variables
+
+| Variable | Scope | Default | Purpose |
+|----------|-------|---------|---------|
+| `VITE_API_BASE_URL` | Frontend build/runtime | `http://localhost:8000` | API root for client.js |
+| `OFFLINE_MODE` | Backend runtime | `0` | Use synthetic data if download fails / force offline |
+| `BOOTSTRAP_TICKERS` | Backend container | `MSFT` | Auto-train tickers at container start |
+| `BOOTSTRAP_HORIZONS` | Backend container | `5` | Horizons for bootstrap training |
+| `VITE_ENABLE_STOCK_SIDEBAR` | Frontend build | `false` | If truthy (`1,true,yes,on`) shows right metrics sidebar |
+
+---
+
+## 6. Quick Start (Local – No Docker)
+
+```bash
+# Clone repo then:
+python -m venv .venv
+source .venv/bin/activate            # Windows PowerShell: .venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+pip install -r backend/requirements.txt
+npm install
+
+# (Optional) Train models (offline synthetic)
+export OFFLINE_MODE=1                 # Windows: set OFFLINE_MODE=1
+python backend/train_lightgbm.py MSFT --horizon 5
+
+# Start backend
+python -m uvicorn backend.predict_service:app --port 8000 --reload
+
+# In another terminal (frontend)
+npm run start
+```
+
+Navigate to:
+- Backend docs: http://localhost:8000/docs
+- Frontend: http://localhost:5173
+
+---
+
+## 7. Quick Start (Docker Compose)
+
+```bash
+docker compose build
+docker compose up
+# or detached: docker compose up -d
+```
+What happens:
+1. Backend container boots, runs `bootstrap_models.py` (training missing tickers/horizons).
+2. Uvicorn serves at http://localhost:8000
+3. Frontend (Nginx) serves static build at http://localhost:5173
+
+Update bootstrap behavior by editing in `docker-compose.yml`:
+```
+BOOTSTRAP_TICKERS=MSFT,AAPL
+BOOTSTRAP_HORIZONS=5,10
+OFFLINE_MODE=1
+```
+
+---
+
+## 8. Model Training Workflow
+
+Command examples:
+```bash
+# Single horizon (30 business days)
+python backend/train_lightgbm.py AAPL --horizon 30
+
+# Multiple horizons at once
+python backend/train_lightgbm.py AAPL --horizons 5,10,30
+```
+
+For each horizon H and each future step s=1..H and quantile q∈{0.1,0.5,0.9} a model file is saved:
+```
+backend/models/AAPL/H10/step_1_q10.pkl
+backend/models/AAPL/H10/step_1_q50.pkl
+...
+backend/models/AAPL/metadata.json
+```
+
+`metadata.json` schema (abridged):
+```json
+{
+	"ticker": "AAPL",
+	"horizons": [5,10,30],
+	"quantiles": [0.1,0.5,0.9],
+	"feature_cols": [...],
+	"metrics": { "H10": { "step_1": { "q10_mae": 1.23, "q10_pinball": 0.75 }, ... } }
+}
+```
+
+### Metrics
+- MAE per step & quantile
+- Pinball loss (quantile regression objective quality)
+
+---
+
+## 9. Offline / Synthetic Mode
+
+Set `OFFLINE_MODE=1` to bypass yfinance dependency or network outages.
+- Training: generates deterministic synthetic OHLCV series using seeded noise.
+- Prediction: falls back to local CSV or a small synthetic series if download fails.
+
+Benefits: reproducible CI, local demos without network, consistent container startup.
+
+---
+
+## 10. API Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/health` | Basic liveness check |
+| GET | `/api/models` | List available tickers + horizons |
+| GET | `/api/models/{ticker}` | Metadata for ticker |
+| POST | `/api/predict` | Forecast with quantile intervals |
+
+### POST /api/predict Request
+```json
+{ "ticker": "MSFT", "horizon": 5, "recent": 120 }
+```
+
+### Response (excerpt)
+```json
+{
+	"ticker": "MSFT",
+	"horizon": 5,
+	"historical": [{"date":"2025-10-01","close":312.45}, ...],
+	"predictions": [
+		{"date":"2025-10-08","p10":310.1,"p50":312.0,"p90":314.2},
+		...
+	],
+	"metrics": {"step_1": {"q10_mae": 1.2, "q10_pinball": 0.7}},
+	"note": "Requested horizon 7 not available; using 10 from [5,10]"  // present only on fallback
+}
+```
+
+---
+
+## 11. React Hooks Usage
 
 ```jsx
 import { useModelMetadata, useStockForecast } from '@/api/hooks';
 
 function ForecastPanel({ ticker }) {
-  const { data: meta } = useModelMetadata(ticker, { enabled: !!ticker });
-  const horizon = meta?.horizons?.[0] || 5;
-  const { data: fc, isLoading } = useStockForecast({ ticker, horizon, enabled: !!ticker });
-  if (!ticker) return <div>Select a ticker</div>;
-  if (isLoading) return <div>Loading…</div>;
-  return <pre>{JSON.stringify(fc.predictions.slice(0,3), null, 2)}</pre>;
+	const { data: meta } = useModelMetadata(ticker, { enabled: !!ticker });
+	const horizon = meta?.horizons?.[0] || meta?.horizon || 5;
+	const { data: fc, isLoading, error } = useStockForecast({ ticker, horizon, enabled: !!ticker });
+	if (!ticker) return <div>Select a ticker</div>;
+	if (isLoading) return <div>Loading…</div>;
+	if (error) return <pre>{String(error)}</pre>;
+	return <pre>{JSON.stringify(fc.predictions.slice(0,2), null, 2)}</pre>;
 }
 ```
 
-The stock analysis dashboard page now demonstrates a basic integration snippet showing model output.
-
-### Offline / No Network Mode
-
-If Yahoo Finance is unavailable or you are in an offline environment, set:
-
-```
-OFFLINE_MODE=1
-```
-
-Effects:
-- `backend/train_lightgbm.py` will generate synthetic OHLCV data if download fails.
-- `backend/predict_service.py` will fall back to existing CSV in `backend/data/` or create a small synthetic series.
-- You can also pre-generate larger synthetic datasets:
-
-```
-python backend/generate_sample_data.py AAPL MSFT TSLA --days 1500
-```
-
-Then train as usual:
-```
-python backend/train_lightgbm.py AAPL --horizons 5,10 --horizon 10
-```
-### Directory
-```
-backend/
-  requirements.txt
-  data/                # downloaded raw CSVs (AAPL.csv, etc.)
-  data_fetch.py        # yfinance downloader
-  feature_engineering.py
-  train_lightgbm.py    # trains quantile models per horizon step
-  predict_service.py   # FastAPI app exposing /api/predict
-  models/              # saved models (ignored by git)
-```
-
-### Install Backend Deps
-```bash
-cd backend
-python -m venv .venv
-source .venv/Scripts/activate  # Windows PowerShell: .venv\\Scripts\\Activate.ps1
-pip install -r requirements.txt
-```
-
-### 1. Download Data
-```bash
-python data_fetch.py AAPL MSFT GOOGL --start 2018-01-01
-```
-
-### 2. Train Models
-Trains quantile models (0.1 / 0.5 / 0.9) for each horizon step (default 30 future business days):
-```bash
-python train_lightgbm.py AAPL --horizon 30
-```
-Artifacts saved under `backend/models/AAPL/`:
-```
-step_1_q10.pkl
-step_1_q50.pkl
-step_1_q90.pkl
-...
-step_30_q10.pkl
-step_30_q50.pkl
-step_30_q90.pkl
-metadata.json
-```
-
-### 3. Run API Server
-```bash
-uvicorn predict_service:app --reload --port 8000
-```
-Health check: http://localhost:8000/health
-
-### 4. Endpoint
-POST http://localhost:8000/api/predict
-```json
-{
-  "ticker": "AAPL",
-  "horizon": 30,
-  "recent": 200
-}
-```
-Response shape:
-```json
-{
-  "ticker": "AAPL",
-  "historical": [{"date":"2025-09-01","close":189.12}, ...],
-  "predictions": [
-     {"date":"2025-10-01","p10":185.1,"p50":189.3,"p90":193.2},
-     ...
-  ],
-  "metrics": {"step_1": {"q10_mae": 1.23, "q50_mae": 0.95, "q90_mae": 1.40}, ...}
-}
-```
-
-### 5. Frontend Integration
-Add an environment variable in the React app `.env`:
-```
-VITE_API_BASE_URL=http://localhost:8000
-```
-Then create a helper:
-```js
-export async function fetchForecast(ticker, horizon=30) {
-  const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/predict`, {
-    method: 'POST',
-    headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({ ticker, horizon, recent: 200 })
-  });
-  if(!res.ok) throw new Error(await res.text());
-  return res.json();
-}
-```
-
-### 6. Confidence Intervals
-Provided via quantile models (p10 / p50 / p90). Use p10 & p90 to render an area band around the median line in charts.
-
-### Running the API Locally
-1. Install dependencies: `pip install -r backend/requirements.txt`
-2. (Optional) Train models for a ticker (offline synthetic if failed): `python backend/train_lightgbm.py MSFT --horizon 5`
-3. Recommended start (handles PATH issues):
-   - Windows PowerShell:
-     ```powershell
-     $env:OFFLINE_MODE=1
-     python -m uvicorn backend.predict_service:app --port 8000 --reload
-     ```
-   - Or simply run the helper batch script (offline by default):
-     ```cmd
-     start_backend.bat
-     ```
-   - To force online mode with the batch script: `start_backend.bat ONLINE`
-
-If you previously saw 'uvicorn not recognized', using `python -m uvicorn ...` ensures the correct interpreter module is used even when Scripts\ is not on PATH.
-### 6.1 Model Loading Optimization
-`backend/utils/model_loader.py` caches loaded models & metadata (LRU cache) so repeated `/api/predict` calls avoid re-reading each LightGBM file. If you retrain models, restart the API process to clear the cache.
-
-### 6.2 Multi-Horizon & Pinball Loss
-You can now train multiple horizons in one run:
-```bash
-python train_lightgbm.py AAPL --horizons 5,10,30
-```
-Models stored under:
-```
-backend/models/AAPL/H5/step_1_q10.pkl ...
-backend/models/AAPL/H10/...
-backend/models/AAPL/H30/...
-backend/models/AAPL/metadata.json
-```
-Metadata contains `horizons`, `default_horizon`, and metrics nested by horizon key (e.g. `H30`). Each step logs both MAE and pinball (quantile) loss:
-```json
-"metrics": { "H30": { "step_1": { "q10_mae": 1.1, "q10_pinball": 0.7, ... }}}
-```
-Request a different horizon by passing `horizon` in the predict body (must match a trained one).
-
-### 6.3 Model Metadata Endpoint
-Retrieve raw metadata:
-```
-GET /api/models/AAPL
-```
-Returns horizons, quantiles, feature list, metrics, timestamps.
-
-### 6.4 Docker Deployment
-Two Dockerfiles provided:
-- `Dockerfile.backend` (FastAPI + Uvicorn)
-- `Dockerfile.frontend` (Vite build -> Nginx static)
-
-Compose everything:
-```bash
-docker-compose up --build
-```
-Frontend: http://localhost:5173  (proxy environment variable points backend at http://localhost:8000)
-Backend:  http://localhost:8000/health
-
-Production tip: Put Nginx reverse proxy in front and enable caching of `/api/predict` responses for short TTL if traffic is high.
-
-### 7. Retraining
-Run the same training script again after refreshing data; metadata is overwritten.
-
-### 8. Extending
-Ideas:
-- Add more technical indicators
-- Train different horizons (e.g., 5, 10, 60) and choose dynamically
-- Add caching layer (Redis) for downloaded yfinance data
-- Persist evaluation metrics history
+Caching: In-memory Maps keyed by normalized `TICKER|HORIZON`. Errors returned through hook's `error` state.
 
 ---
 
-## ❓ Troubleshooting
-| Issue | Fix |
-|-------|-----|
-| API 404 model not found | Run data fetch + training for that ticker |
-| Horizon mismatch | Retrain with desired horizon or adjust frontend |
-| Slow first response | yfinance download latency—consider local cache |
-| Missing p10/p90 | Ensure all quantile model files exist; retrain |
+## 12. Deployment Paths
+
+### Docker Compose (Full Stack)
+```
+docker compose up --build
+```
+
+### Standalone Backend Image
+```
+docker build -f Dockerfile.backend -t stock-api .
+docker run -p 8000:8000 -e OFFLINE_MODE=1 stock-api
+```
+
+### GitHub Pages (Frontend Only)
+Workflow: `.github/workflows/frontend-deploy.yml`.
+Configure Pages → Source = `gh-pages` branch. Provide API endpoint via build env:
+```
+VITE_API_BASE_URL=https://your-api.example.com npm run build
+```
+
+### CI (GitHub Actions)
+Workflow: `.github/workflows/ci.yml` (tests, build, Docker build). Extend to push images to GHCR by adding a login + push step.
+
+### Cloud Hosting Options
+| Platform | Start Command |
+|----------|---------------|
+| Render / Railway | `uvicorn backend.predict_service:app --host 0.0.0.0 --port $PORT` |
+| Fly.io | Provided via `fly.toml` (set internal port 8000) |
+| Cloud Run | Container port 8000, `OFFLINE_MODE=1` optional |
+| VPS + Nginx | Reverse proxy to `localhost:8000` |
 
 ---
 
-## 🛡️ Disclaimer
-This forecasting setup is for educational purposes; not financial advice.
+## 13. Testing
 
+### Backend Unit Tests
+```
+pytest -q
+```
+Install dev deps already included in `backend/requirements.txt` (pytest + httpx).
 
+### Smoke Test Script (Manual)
+```bash
+curl http://localhost:8000/health
+curl http://localhost:8000/api/models
+curl -X POST http://localhost:8000/api/predict -H 'Content-Type: application/json' \
+	-d '{"ticker":"MSFT","horizon":5,"recent":120}'
+```
+
+---
+
+## 14. Retraining & Updating Models
+
+1. (Optional) Refresh raw CSVs or rely on synthetic offline mode.
+2. Run training with new horizons.
+3. Restart backend (model cache is in-memory) to pick up new artifact set.
+
+Automated container bootstrap prevents missing model errors in ephemeral environments.
+
+---
+
+## 15. Troubleshooting
+
+| Symptom | Likely Cause | Fix |
+|---------|--------------|-----|
+| `API ... net::ERR_CONNECTION_REFUSED` | Backend not running or wrong BASE_URL | Start backend / correct `VITE_API_BASE_URL` |
+| `Model not trained` 404 | Missing metadata/models | Train (`train_lightgbm.py`) or allow bootstrap |
+| Horizon error | Unavailable horizon requested | Fallback now automatic – inspect `note` in response |
+| `uvicorn not recognized` | Using scripts path not exported | Use `python -m uvicorn backend.predict_service:app ...` |
+| Slow first call | yfinance delay / network | Use `OFFLINE_MODE=1` or warm up container |
+| Memory bloat training | Large horizons + many quantiles | Limit horizons or steps (smaller set) |
+
+---
+
+## 16. Production Hardening Checklist
+- Restrict CORS origins (current config is permissive: `*`).
+- Add proper logging & structured metrics.
+- Mount persistent volume / object storage for `backend/models`.
+- Implement scheduled retraining & artifact versioning.
+- Add authentication / rate limiting if exposed publicly.
+- Replace synthetic fallback with robust data caching layer (Redis / DB).
+
+---
+
+## 17. Disclaimer / License
+
+This project & forecasts are for educational purposes only and not financial advice. Ensure compliance with any data provider terms when enabling live downloads.
+
+---
+
+## 18. Quick Command Reference
+
+```bash
+# Local dev (backend + frontend)
+OFFLINE_MODE=1 python -m uvicorn backend.predict_service:app --port 8000 --reload
+npm run start
+
+# Train multi-horizon
+python backend/train_lightgbm.py AAPL --horizons 5,10,30
+
+# Docker full stack
+docker compose up --build
+
+# Predict (manual)
+curl -X POST http://localhost:8000/api/predict -H 'Content-Type: application/json' \
+	-d '{"ticker":"MSFT","horizon":5,"recent":120}'
+```
+
+---
+
+**Happy Building & Forecasting!**
 

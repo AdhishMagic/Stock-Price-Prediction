@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Helmet } from 'react-helmet';
 import Header from '../../components/ui/Header';
 import Icon from '../../components/AppIcon';
-import Button from '../../components/ui/Button';
+// Button import removed (sidebar toggle removed)
 
 // Import all components
 import StockSearchBar from './components/StockSearchBar';
@@ -35,7 +35,7 @@ const StockAnalysisDashboard = () => {
   const [viewMode, setViewMode] = useState('overlay');
   const [showHistorical, setShowHistorical] = useState(true);
   const [showPredicted, setShowPredicted] = useState(true);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  // Removed sidebar collapse feature and floating chevron button
 
   // Mock stock data
   const [stockData, setStockData] = useState({
@@ -196,6 +196,13 @@ const StockAnalysisDashboard = () => {
 
   const combinedLoading = isLoading || metaLoading || forecastLoading;
 
+  // Feature flag: enable / disable sidebar layout.
+  // Accepts values: '1', 'true', 'yes' (case-insensitive) to enable; anything else disables.
+  const enableSidebar = (() => {
+    const raw = (import.meta?.env?.VITE_ENABLE_STOCK_SIDEBAR ?? '').toString().trim().toLowerCase();
+    return ['1','true','yes','on'].includes(raw);
+  })();
+
   return (
     <>
       <Helmet>
@@ -314,10 +321,32 @@ const StockAnalysisDashboard = () => {
                   )}
             </div>
 
-            {/* Main Chart and Sidebar */}
-            <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 mb-8">
-              {/* Main Chart Area */}
-              <div className={`${sidebarCollapsed ? 'xl:col-span-12' : 'xl:col-span-8'} transition-all duration-300`}>
+            {/* Main Chart + Optional Sidebar (feature flag controlled) */}
+            {enableSidebar ? (
+              <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 mb-8">
+                {/* Main Chart Area */}
+                <div className="xl:col-span-8 transition-all duration-300">
+                  <StockChart
+                    selectedStock={selectedStock}
+                    isLoading={isLoading}
+                    showPrediction={showPredicted}
+                    viewMode={viewMode}
+                    historicalData={stockData}
+                    predictionData={predictionData}
+                  />
+                </div>
+                {/* Right Sidebar */}
+                <div className="xl:col-span-4 transition-all duration-300">
+                  <div className="space-y-6">
+                    <ModelAccuracyMetrics
+                      selectedStock={selectedStock}
+                      isLoading={isLoading}
+                    />
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="mb-8">
                 <StockChart
                   selectedStock={selectedStock}
                   isLoading={isLoading}
@@ -326,29 +355,15 @@ const StockAnalysisDashboard = () => {
                   historicalData={stockData}
                   predictionData={predictionData}
                 />
-              </div>
-
-              {/* Right Sidebar */}
-              <div className={`${sidebarCollapsed ? 'hidden xl:hidden' : 'xl:col-span-4'} transition-all duration-300`}>
-                <div className="space-y-6">
+                {/* Accuracy metrics moved below chart when sidebar disabled */}
+                <div className="mt-6">
                   <ModelAccuracyMetrics
                     selectedStock={selectedStock}
                     isLoading={isLoading}
                   />
-                  
-                  {/* Sidebar Toggle Button */}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                    className="w-full xl:hidden"
-                  >
-                    <Icon name={sidebarCollapsed ? 'ChevronLeft' : 'ChevronRight'} size={16} className="mr-2" />
-                    {sidebarCollapsed ? 'Show Sidebar' : 'Hide Sidebar'}
-                  </Button>
                 </div>
               </div>
-            </div>
+            )}
 
             {/* Bottom Controls Section */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -376,15 +391,7 @@ const StockAnalysisDashboard = () => {
               </div>
             </div>
 
-            {/* Sidebar Toggle for Desktop */}
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-              className="fixed right-4 top-1/2 transform -translate-y-1/2 z-50 hidden xl:flex"
-            >
-              <Icon name={sidebarCollapsed ? 'ChevronLeft' : 'ChevronRight'} size={16} />
-            </Button>
+            {/* Floating sidebar toggle removed */}
           </div>
         </main>
       </div>
