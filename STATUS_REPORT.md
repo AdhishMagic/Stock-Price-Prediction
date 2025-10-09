@@ -1,4 +1,4 @@
-# Stock Prediction Full Stack Application - Status Report
+is this full stack app runing good# Stock Prediction Full Stack Application - Status Report
 
 ## ✅ Application Status: **READY FOR TESTING**
 

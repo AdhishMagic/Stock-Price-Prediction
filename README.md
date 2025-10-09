@@ -27,12 +27,9 @@ End‑to‑end stock forecasting web application combining a React/Tailwind fron
 - Model & metadata caching (LRU) for faster subsequent predictions
 - Synthetic data fallback (OFFLINE_MODE) for training & inference resilience
 
-### DevOps / Deployment
-- Docker (separate backend + frontend images) + `docker-compose`
-- Bootstrap auto‑training inside backend container if models missing
-- GitHub Actions CI (tests + build + Docker build)
-- GitHub Pages workflow for static frontend deployment
-- Configurable via environment variables (API base URL, offline mode, bootstrap tickers/horizons)
+### Dev Tooling
+- Local-first dev workflow (no Docker required)
+- Configurable via environment variables (API base URL, offline mode)
 
 ---
 
@@ -62,7 +59,7 @@ Training pipeline builds one model per (step, quantile) for each requested horiz
 | Frontend | React 18, Vite, TailwindCSS, Recharts/D3, React Router v6, Framer Motion |
 | Backend | FastAPI, Uvicorn, Pydantic |
 | ML | LightGBM (quantile), scikit-learn metrics, NumPy, Pandas |
-| Tooling | GitHub Actions, Docker / Compose, Node 20, Python 3.11/3.13 compatible |
+| Tooling | Node 20, Python 3.11/3.13 compatible |
 
 ---
 
@@ -80,9 +77,7 @@ src/
 	api/client.js               # Fetch wrapper with BASE_URL normalization
 	api/hooks.js                # React hooks (metadata + forecast) with caching
 	pages/stock-analysis-dashboard/ ... UI pages
-docker-compose.yml            # Multi-container local stack
-Dockerfile.backend / frontend # Container images
-.github/workflows/*.yml       # CI & Pages deploy workflows
+# (Deployment artifacts removed)
 ```
 
 ---
@@ -126,24 +121,7 @@ Navigate to:
 
 ---
 
-## 7. Quick Start (Docker Compose)
-
-```bash
-docker compose build
-docker compose up
-# or detached: docker compose up -d
-```
-What happens:
-1. Backend container boots, runs `bootstrap_models.py` (training missing tickers/horizons).
-2. Uvicorn serves at http://localhost:8000
-3. Frontend (Nginx) serves static build at http://localhost:5173
-
-Update bootstrap behavior by editing in `docker-compose.yml`:
-```
-BOOTSTRAP_TICKERS=MSFT,AAPL
-BOOTSTRAP_HORIZONS=5,10
-OFFLINE_MODE=1
-```
+<!-- Section removed: Docker Compose quick start (deployment artifacts removed) -->
 
 ---
 
@@ -246,34 +224,7 @@ Caching: In-memory Maps keyed by normalized `TICKER|HORIZON`. Errors returned th
 
 ## 12. Deployment Paths
 
-### Docker Compose (Full Stack)
-```
-docker compose up --build
-```
-
-### Standalone Backend Image
-```
-docker build -f Dockerfile.backend -t stock-api .
-docker run -p 8000:8000 -e OFFLINE_MODE=1 stock-api
-```
-
-### GitHub Pages (Frontend Only)
-Workflow: `.github/workflows/frontend-deploy.yml`.
-Configure Pages → Source = `gh-pages` branch. Provide API endpoint via build env:
-```
-VITE_API_BASE_URL=https://your-api.example.com npm run build
-```
-
-### CI (GitHub Actions)
-Workflow: `.github/workflows/ci.yml` (tests, build, Docker build). Extend to push images to GHCR by adding a login + push step.
-
-### Cloud Hosting Options
-| Platform | Start Command |
-|----------|---------------|
-| Render / Railway | `uvicorn backend.predict_service:app --host 0.0.0.0 --port $PORT` |
-| Fly.io | Provided via `fly.toml` (set internal port 8000) |
-| Cloud Run | Container port 8000, `OFFLINE_MODE=1` optional |
-| VPS + Nginx | Reverse proxy to `localhost:8000` |
+<!-- Deployment sections removed (Docker, CI/CD, Pages, Cloud hosting) -->
 
 ---
 
@@ -344,8 +295,7 @@ npm run start
 # Train multi-horizon
 python backend/train_lightgbm.py AAPL --horizons 5,10,30
 
-# Docker full stack
-docker compose up --build
+<!-- Deployment command removed -->
 
 # Predict (manual)
 curl -X POST http://localhost:8000/api/predict -H 'Content-Type: application/json' \

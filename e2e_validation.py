@@ -29,13 +29,13 @@ def log_step(step, msg):
     print(f"\n{Colors.BOLD}{Colors.BLUE}[Step {step}]{Colors.END} {msg}")
 
 def log_success(msg):
-    log(f"✓ {msg}", Colors.GREEN)
+    log(f"OK {msg}", Colors.GREEN)
 
 def log_error(msg):
-    log(f"✗ {msg}", Colors.RED)
+    log(f"FAIL {msg}", Colors.RED)
 
 def log_warning(msg):
-    log(f"⚠ {msg}", Colors.YELLOW)
+    log(f"WARN {msg}", Colors.YELLOW)
 
 def run_command(cmd, shell=True, cwd=None, timeout=300):
     """Run command and return (success, output)"""
@@ -320,20 +320,20 @@ def main():
         print(f"{Colors.BOLD}{Colors.BLUE}{'='*60}{Colors.END}\n")
         
         for test, passed in results.items():
-            status = f"{Colors.GREEN}✓ PASS{Colors.END}" if passed else f"{Colors.RED}✗ FAIL{Colors.END}"
+            status = f"{Colors.GREEN}PASS{Colors.END}" if passed else f"{Colors.RED}FAIL{Colors.END}"
             print(f"{test.replace('_', ' ').title():.<40} {status}")
         
         all_passed = all(results.values())
         
         if all_passed:
-            print(f"\n{Colors.BOLD}{Colors.GREEN}🎉 Full stack application is fully functional!{Colors.END}\n")
+            print(f"\n{Colors.BOLD}{Colors.GREEN}SUCCESS Full stack application is fully functional!{Colors.END}\n")
             print("Next steps:")
             print("  1. Start backend: uvicorn backend.predict_service:app --reload --port 8000")
             print("  2. Start frontend: npm run dev")
             print("  3. Open browser: http://localhost:5173")
             print("  4. Search for AAPL in the dashboard")
         else:
-            print(f"\n{Colors.BOLD}{Colors.RED}❌ Some checks failed. Review errors above.{Colors.END}\n")
+            print(f"\n{Colors.BOLD}{Colors.RED}FAIL Some checks failed. Review errors above.{Colors.END}\n")
         
         return all_passed
         
